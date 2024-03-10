@@ -5,6 +5,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.sql.*;
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
+import java.security.Key;
+import java.util.Base64;
 
 public class LoginServlet extends HttpServlet {
     private String url;
@@ -12,6 +16,12 @@ public class LoginServlet extends HttpServlet {
     private String dbPassword;
     private String dbDriver;
 
+    // Encryption key
+    private static byte[] key = {'a','n','e','s','c','o',
+                                  'n','g','a','n',
+                                  'm','p','2',
+                                  'v','s','2'};
+    
     @Override
     public void init() throws ServletException {
         url = getServletContext().getInitParameter("dbUrl");
@@ -40,37 +50,26 @@ public class LoginServlet extends HttpServlet {
         }
 
         try (Connection con = DriverManager.getConnection(url, dbUsername, dbPassword)) {
-            if (checkCredentials(con, inputUsername, inputPassword) ) {
-                String userRole = getUserRole(con, inputUsername);
-                HttpSession session = request.getSession();
-                session.setAttribute("username", inputUsername);
-                session.setAttribute("role", userRole); 
-                response.sendRedirect("success.jsp");
-            } else {
-                if (isUserExist(con, inputUsername)) {
-                    response.sendRedirect("error_2.jsp"); // INCORRECT PASSWORD
+            if (isUserExist(con, inputUsername)) {
+                String encryptedInputPassword = encrypt(inputPassword); // Encrypt input password
+                String encryptedPassword = getUserEncryptedPassword(con, inputUsername);
+                
+                if (encryptedPassword.equals(encryptedInputPassword)) {
+                    String userRole = getUserRole(con, inputUsername);
+                    HttpSession session = request.getSession();
+                    session.setAttribute("username", inputUsername);
+                    session.setAttribute("role", userRole); 
+                    response.sendRedirect("success.jsp");
                 } else {
-                    if (areCredentialsInvalid(con, inputUsername, inputPassword)) {
-                        response.sendRedirect("error_3.jsp"); // INCORRECT CREDENTIALS
-                    } else {
-                        response.sendRedirect("error_1.jsp"); // USERNAME NOT FOUND
-                    }
+                    response.sendRedirect("error_2.jsp"); // INCORRECT PASSWORD
                 }
+            } else {
+                response.sendRedirect("error_1.jsp"); // USERNAME NOT FOUND
             }
         } catch (SQLException sqle) {
             sqle.printStackTrace();
-            response.sendRedirect("error_session.jsp");
-        }
-    }
-
-    private boolean checkCredentials(Connection con, String inputUsername, String inputPassword) throws SQLException {
-        String query = "SELECT * FROM USERS WHERE email = ? AND password = ?";
-        try (PreparedStatement pstmt = con.prepareStatement(query)) {
-            pstmt.setString(1, inputUsername);
-            pstmt.setString(2, inputPassword);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                return rs.next();
-            }
+            // Log the exception
+            response.sendRedirect("error_generic.jsp"); // Redirect to a generic error page
         }
     }
 
@@ -84,15 +83,17 @@ public class LoginServlet extends HttpServlet {
         }
     }
 
-    private boolean areCredentialsInvalid(Connection con, String inputUsername, String inputPassword) throws SQLException {
-        String query = "SELECT * FROM USERS WHERE email = ? AND password != ?";
+    private String getUserEncryptedPassword(Connection con, String inputUsername) throws SQLException {
+        String query = "SELECT Encrypted_Password FROM USERS WHERE email = ?";
         try (PreparedStatement pstmt = con.prepareStatement(query)) {
             pstmt.setString(1, inputUsername);
-            pstmt.setString(2, inputPassword);
             try (ResultSet rs = pstmt.executeQuery()) {
-                return !rs.next();
+                if (rs.next()) {
+                    return rs.getString("Encrypted_Password");
+                }
             }
         }
+        return null;
     }
 
     private String getUserRole(Connection con, String inputUsername) throws SQLException {
@@ -106,5 +107,18 @@ public class LoginServlet extends HttpServlet {
             }
         }
         return null;
+    }
+
+    private static String encrypt(String strToEncrypt) {
+        String encryptedString = null;
+        try {
+            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+            final SecretKeySpec secretKey = new SecretKeySpec(key, "AES");
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey);
+            encryptedString = Base64.getEncoder().encodeToString(cipher.doFinal(strToEncrypt.getBytes()));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return encryptedString;
     }
 }
