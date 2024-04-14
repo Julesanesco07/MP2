@@ -1,3 +1,5 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page import="java.io.*, javax.servlet.*, javax.servlet.http.*"%>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,24 +8,19 @@
     <title>Login Page</title>
     <link rel="stylesheet" href="IndexCSS.css">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script>
+        function disablePaste() {
+            document.getElementById('captchaInput').addEventListener('paste', function(event) {
+                event.preventDefault();
+                alert('Copying and pasting is not allowed for captcha!');
+            });
+        }
+        window.onload = function() {
+            disablePaste();
+        };
+    </script>
 </head>
 <body>
-    <%
-     if (session != null) {
-            session.invalidate();
-            System.out.println("Session invalidated successfully.");
-        }
-    %>
-    
-    <%
-            if (session == null) {
-                response.sendRedirect("error_session.jsp");
-            } 
-            
-        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        response.setHeader("Pragma", "no-cache");
-        response.setDateHeader("Expires", 0); 
-        %>
     <div class="header">
         ${initParam.headerContent}
     </div>
@@ -38,6 +35,12 @@
                     </div>
                     <div class="input-box">
                         <input type="password" name="password" placeholder="Password">
+                    </div>
+                    <div class="captcha">
+                        <h3><jsp:include page="CaptchaServlet"></jsp:include></h3>
+                    </div>
+                    <div class="input-box">
+                        <input type="text" name="captchaInput" id="captchaInput" placeholder="Enter Captcha">
                     </div>
                     <button type="submit" class="button">Log In</button>
                 </form>
