@@ -1,62 +1,112 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<web-app version="3.1" xmlns="http://xmlns.jcp.org/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd">
+<web-app version="3.1" xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd">
+
     <!-- Welcome File -->
     <welcome-file-list>
         <welcome-file>index.jsp</welcome-file>
     </welcome-file-list>
+
     <!-- Servlet Configuration -->
     <servlet>
         <servlet-name>LoginServlet</servlet-name>
         <servlet-class>LoginServlet</servlet-class>
     </servlet>
+
     <servlet>
         <servlet-name>BackServlet</servlet-name>
         <servlet-class>BackServlet</servlet-class>
     </servlet>
+
+    <!-- SimpleCaptcha Servlet Configuration -->
+    <servlet>
+        <servlet-name>CaptchaServlet</servlet-name>
+        <servlet-class>CaptchaServlet</servlet-class>
+    </servlet>
+     <servlet>
+        <servlet-name>PDFServlet</servlet-name>
+        <servlet-class>PDFServlet</servlet-class>
+    </servlet>
+
     <!-- Servlet Mapping -->
     <servlet-mapping>
         <servlet-name>LoginServlet</servlet-name>
         <url-pattern>/LoginServlet</url-pattern>
     </servlet-mapping>
+
     <servlet-mapping>
         <servlet-name>BackServlet</servlet-name>
         <url-pattern>/BackServlet</url-pattern>
     </servlet-mapping>
+
+    <!-- SimpleCaptcha Servlet Mapping -->
+    <servlet-mapping>
+        <servlet-name>CaptchaServlet</servlet-name>
+        <url-pattern>/CaptchaServlet</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>PDFServlet</servlet-name>
+        <url-pattern>/PDFServlet</url-pattern>
+    </servlet-mapping>
+
     <!-- Database Management -->
     <context-param>
         <param-name>dbUrl</param-name>
         <param-value>jdbc:derby://localhost:1527/MP1_Database</param-value>
     </context-param>
+
     <context-param>
         <param-name>dbUsername</param-name>
         <param-value>app</param-value>
     </context-param>
+
     <context-param>
         <param-name>dbPassword</param-name>
         <param-value>app</param-value>
     </context-param>
+
     <context-param>
         <param-name>dbDriver</param-name>
         <param-value>org.apache.derby.jdbc.ClientDriver</param-value>
     </context-param>
+
+    <!-- Encryption Configuration -->
+    <context-param>
+        <param-name>encryptionKey</param-name>
+        <param-value>anesconganmp2vs2</param-value>
+    </context-param>
+
+    <context-param>
+        <param-name>encryptionAlgorithm</param-name>
+        <param-value>AES/ECB/PKCS5Padding</param-value>
+    </context-param>
+    
+    <context-param>
+    <param-name>captchaLength</param-name>
+    <param-value>6</param-value> 
+    </context-param>
+
     <!-- Header & Footer-->
     <context-param>
         <param-name>headerContent</param-name>
         <param-value>ICS2609</param-value>
     </context-param>
+
     <context-param>
         <param-name>footerContent</param-name>
         <param-value>Ngan   |   Anesco</param-value>
     </context-param>
+
     <!-- Session Management-->
     <session-config>
-    <session-timeout>5</session-timeout>
+        <session-timeout>5</session-timeout>
     </session-config>
-     <!-- Error Page Configuration -->
+
+    <!-- Error Page Configuration -->
     <error-page>
         <error-code>404</error-code>
         <location>/error_404.jsp</location>
     </error-page>
- 
 
 </web-app>
