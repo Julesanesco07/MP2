@@ -61,18 +61,21 @@ public class PDFServlet extends HttpServlet {
         // Fetch data from the database based on the user's role
         StringBuilder reportData = new StringBuilder();
         String reportType = "";
+        int totalPages = 0;
         if (userRole.equals("admin")) {
             reportData.append(fetchGuestReportData()).append("\n"); // Append guest data first
             reportData.append(fetchAdminReportData());
             reportType = "Admin Report";
+            totalPages = 3; // Set total pages for admin
         } else if (userRole.equals("guest")) {
             reportData.append(fetchGuestReportData(owner));
             reportType = "Guest Report";
+            totalPages = 1; // Set total pages for guest
         }
 
         // Generate PDF with the fetched data and send it to the client
-        generatePDF(response, reportData.toString(), reportType, owner);
-          session.invalidate();
+        generatePDF(response, reportData.toString(), reportType, owner, userRole, totalPages);
+        session.invalidate();
     }
 
     private String fetchAdminReportData() {
@@ -81,18 +84,11 @@ public class PDFServlet extends HttpServlet {
             String query = "SELECT email, role FROM USERS WHERE role = 'admin'";
             try (PreparedStatement pstmt = con.prepareStatement(query);
                  ResultSet rs = pstmt.executeQuery()) {
-                int adminCounter = 1;
-                boolean isFirstLine = true; // Flag to track the first line
-                while (rs.next() && adminCounter <= 6) {
+                while (rs.next()) {
                     String email = rs.getString("email");
                     String role = rs.getString("role");
-                    if (isFirstLine) {
-                        // Add header line
-                        adminReport.append(String.format("%-38s %-37s%n", "EMAIL", "    ROLE")); // Adjusted width for EMAIL and ROLE
-                        isFirstLine = false; // Set to false after printing the header line
-                    }
-                    // Add data lines with numbering
-                    adminReport.append(String.format("%-5s %-38s %-37s%n", adminCounter++, email, role)); // Adjusted width for EMAIL and ROLE
+                    adminReport.append("Email: ").append(email).append("\n");
+                    adminReport.append("Role: ").append(role).append("\n");
                 }
             }
         } catch (SQLException e) {
@@ -107,18 +103,11 @@ public class PDFServlet extends HttpServlet {
             String query = "SELECT email, role FROM USERS WHERE role = 'guest'";
             try (PreparedStatement pstmt = con.prepareStatement(query);
                  ResultSet rs = pstmt.executeQuery()) {
-                int guestCounter = 1;
-                boolean isFirstLine = true; // Flag to track the first line
-                while (rs.next() && guestCounter <= 100) {
+                while (rs.next()) {
                     String email = rs.getString("email");
                     String role = rs.getString("role");
-                    if (isFirstLine) {
-                        // Add header line
-                        guestReport.append(String.format("%-38s %-37s%n", "EMAIL", "    ROLE")); // Adjusted width for EMAIL and ROLE
-                        isFirstLine = false; // Set to false after printing the header line
-                    }
-                    // Add data lines with numbering
-                    guestReport.append(String.format("%-5s %-38s %-37s%n", guestCounter++, email, role)); // Adjusted width for EMAIL and ROLE
+                    guestReport.append("Email: ").append(email).append("\n");
+                    guestReport.append("Role: ").append(role).append("\n");
                 }
             }
         } catch (SQLException e) {
@@ -149,7 +138,7 @@ public class PDFServlet extends HttpServlet {
         return guestReport.toString();
     }
 
-    private void generatePDF(HttpServletResponse response, String reportData, String reportType, String owner) {
+    private void generatePDF(HttpServletResponse response, String reportData, String reportType, String owner, String userRole, int totalPages) {
         Document document = new Document();
         try {
             response.setContentType("application/pdf");
@@ -157,11 +146,11 @@ public class PDFServlet extends HttpServlet {
 
             PdfWriter writer = PdfWriter.getInstance(document, response.getOutputStream());
             PdfPageEventHelper eventHelper = new PdfPageEventHelper() {
-                int totalPages = 0;
+                int currentPage = 0;
 
                 @Override
                 public void onStartPage(PdfWriter writer, Document document) {
-                    totalPages++; // Increment total pages on each new page
+                    currentPage++;
                 }
 
                 @Override
@@ -170,15 +159,21 @@ public class PDFServlet extends HttpServlet {
                     Font footerFont = new Font(Font.FontFamily.HELVETICA, 10, Font.ITALIC);
 
                     // PAGE NUMBER
-                    Phrase footer = new Phrase(String.format("Page %d of %d", writer.getPageNumber(), totalPages), footerFont);
+                    Phrase footer = new Phrase(String.format("Page %d of %d", currentPage, totalPages > 0 ? totalPages : currentPage), footerFont);
                     ColumnText.showTextAligned(cb, Element.ALIGN_RIGHT, footer,
                             document.right() - 50, document.bottom() - 20, 0);
 
                     // OWNER
-                    Font italicFont = new Font(Font.FontFamily.HELVETICA, 10, Font.ITALIC); // Define italic font
-                    Phrase ownerPhrase = new Phrase("Owner: " + owner, italicFont); // Apply italic font
+                    Font italicFont = new Font(Font.FontFamily.HELVETICA, 10, Font.ITALIC);
+                    Phrase ownerPhrase = new Phrase("Owner: " + owner, italicFont);
                     ColumnText.showTextAligned(cb, Element.ALIGN_LEFT, ownerPhrase,
                             document.left() + 50, document.bottom() - 20, 0);
+
+                    // LABEL
+                    Font labelFont = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD);
+                    Paragraph label = new Paragraph("Email and Roles:", labelFont);
+                    ColumnText.showTextAligned(cb, Element.ALIGN_LEFT, label,
+                            document.left() + 50, document.top() + 20, 0);
                 }
             };
             writer.setPageEvent(eventHelper);
